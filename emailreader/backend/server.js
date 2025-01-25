@@ -3,7 +3,7 @@ import express from "express";
 import cors from "cors";
 
 const app = express();
-const client = new OAuth2Client("YOUR_GOOGLE_CLIENT_ID");
+const client = new OAuth2Client("807669090767-llgvrlojm7amhibj90u0baqit39f4rh0.apps.googleusercontent.com");
 
 app.use(cors());
 app.use(express.json());
