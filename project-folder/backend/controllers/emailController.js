@@ -1,27 +1,20 @@
-const { google } = require('googleapis');
-const OAuth2 = google.auth.OAuth2;
+const { categorizeEmail, filterEmails } = require('../utils/filter');
 
-const oAuth2Client = new OAuth2(
-  process.env.CLIENT_ID,
-  process.env.CLIENT_SECRET,
-  'https://developers.google.com/oauthplayground'
-);
+// Categorize a batch of emails
+const getCategorizedEmails = (req, res) => {
+  const emails = req.body.emails; // Receive emails as JSON in the request body
+  const categorizedEmails = emails.map(email => ({
+    ...email,
+    category: categorizeEmail(email),
+  }));
+  res.json(categorizedEmails);
+};
 
-oAuth2Client.setCredentials({
-  refresh_token: process.env.REFRESH_TOKEN,
-});
+// Filter emails by category
+const getFilteredEmails = (req, res) => {
+  const { emails, category } = req.body; // Expect category and emails in the body
+  const filteredEmails = filterEmails(emails, category);
+  res.json(filteredEmails);
+};
 
-const gmail = google.gmail({ version: 'v1', auth: oAuth2Client });
-
-async function fetchEmails(req, res) {
-  try {
-    const result = await gmail.users.messages.list({ userId: 'me', maxResults: 10 });
-    const messages = result.data.messages || [];
-    res.json(messages);
-  } catch (error) {
-    console.error(error);
-    res.status(500).json({ error: 'Failed to fetch emails.' });
-  }
-}
-
-module.exports = { fetchEmails };
+module.exports = { getCategorizedEmails, getFilteredEmails };

@@ -1,7 +1,12 @@
 const express = require('express');
-const router = express.Router();
-const { fetchEmails } = require('../controllers/emailController');
+const { getCategorizedEmails, getFilteredEmails } = require('../controllers/emailController');
 
-router.get('/emails', fetchEmails);
+const router = express.Router();
+
+// Route to categorize emails
+router.post('/categorize', getCategorizedEmails);
+
+// Route to filter emails by category
+router.post('/filter', getFilteredEmails);
 
 module.exports = router;
