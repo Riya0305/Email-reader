@@ -1,77 +1,96 @@
-//fetch and analyze emails
 const { google } = require('googleapis');
-const axios = require('axios');
-const { OAuth2 } = google.auth;
+const { Configuration, OpenAIApi } = require('openai');
 
-const oAuth2Client = new OAuth2(
-  process.env.CLIENT_ID,
-  process.env.CLIENT_SECRET,
-  process.env.REDIRECT_URI
-);
-oAuth2Client.setCredentials({ refresh_token: process.env.REFRESH_TOKEN });
+// Configure Gmail API client
+const gmail = google.gmail('v1');
+const openai = new OpenAIApi(new Configuration({ apiKey: process.env.OPENAI_API_KEY }));
 
-// Fetch emails using Gmail API
-async function fetchEmails() {
-  const gmail = google.gmail({ version: 'v1', auth: oAuth2Client });
-
+// Fetch emails from Gmail
+const fetchEmailsFromGmail = async () => {
   try {
-    const response = await gmail.users.messages.list({
+    // Assuming that OAuth2 authentication has been done and an access token is available
+    const auth = new google.auth.OAuth2();
+    auth.setCredentials({ access_token: process.env.GMAIL_ACCESS_TOKEN });
+
+    const res = await gmail.users.messages.list({
+      auth,
       userId: 'me',
-      q: 'is:unread', // Fetch unread emails
+      q: 'is:unread', // Adjust query based on filtering criteria
     });
 
-    const messages = response.data.messages || [];
+    const emails = res.data.messages || [];
+    const emailDetails = [];
 
-    const emails = [];
-    for (const message of messages) {
-      const email = await gmail.users.messages.get({
+    // Retrieve the details for each email message
+    for (const email of emails) {
+      const emailDetail = await gmail.users.messages.get({
+        auth,
         userId: 'me',
-        id: message.id,
+        id: email.id,
       });
-
-      emails.push({
-        id: email.data.id,
-        subject: getHeader(email.data.payload.headers, 'Subject'),
-        body: email.data.snippet,
-      });
+      emailDetails.push(emailDetail.data);
     }
 
-    return emails;
+    return emailDetails; // Return email details
   } catch (error) {
     console.error('Error fetching emails:', error.message);
-    throw error;
+    throw new Error('Error fetching emails');
   }
-}
+};
 
-// Analyze emails using ChatGPT
-async function analyzeEmailWithChatGPT(email) {
+// Categorize and extract tasks from email body
+const categorizeAndExtractTasks = (emailBody) => {
+  const tasks = [];
+  // Assume email body is plain text or HTML
+  const taskPattern = /\b(?:task|to-do|action)\b.*\?/gi; // A simple task pattern (adjust as needed)
+  const matches = emailBody.match(taskPattern);
+
+  if (matches) {
+    matches.forEach(task => tasks.push({ taskDescription: task }));
+  }
+
+  return tasks;
+};
+
+// Analyze email with ChatGPT for additional insights
+const analyzeEmailWithChatGPT = async (email) => {
   try {
-    const response = await axios.post(
-      'https://api.openai.com/v1/completions',
-      {
-        model: 'text-davinci-003',
-        prompt: `Analyze the following email and identify tasks with due dates and priority:\n\nSubject: ${email.subject}\n\nBody: ${email.body}`,
-        max_tokens: 150,
-      },
-      {
-        headers: {
-          Authorization: `Bearer ${process.env.OPENAI_API_KEY}`,
-          'Content-Type': 'application/json',
-        },
-      }
-    );
+    const emailContent = email.snippet || ''; // Use snippet or full email body
+    const response = await openai.createCompletion({
+      model: 'text-davinci-003',
+      prompt: `Analyze the following email content: \n\n${emailContent}`,
+      max_tokens: 200,
+    });
 
     return response.data.choices[0].text.trim();
   } catch (error) {
     console.error('Error analyzing email with ChatGPT:', error.message);
-    throw error;
+    throw new Error('Error analyzing email');
   }
-}
+};
 
-// Helper function to extract headers
-function getHeader(headers, name) {
-  const header = headers.find(h => h.name.toLowerCase() === name.toLowerCase());
-  return header ? header.value : '';
-}
+// Process emails: fetch, categorize, and analyze tasks
+const processEmails = async () => {
+  try {
+    const emails = await fetchEmailsFromGmail();
+    const processedEmails = [];
 
-module.exports = { fetchEmails, analyzeEmailWithChatGPT };
+    for (const email of emails) {
+      const emailBody = email.snippet || '';
+      const tasks = categorizeAndExtractTasks(emailBody);
+      const analysis = await analyzeEmailWithChatGPT(email);
+      processedEmails.push({
+        emailId: email.id,
+        tasks,
+        analysis,
+      });
+    }
+
+    return processedEmails; // Return processed emails with tasks and analysis
+  } catch (error) {
+    console.error('Error processing emails:', error.message);
+    throw new Error('Error processing emails');
+  }
+};
+
+module.exports = { fetchEmailsFromGmail, categorizeAndExtractTasks, analyzeEmailWithChatGPT, processEmails };

@@ -1,12 +1,20 @@
+// This file defines the API routes for fetching emails, processing emails to extract tasks, and retrieving tasks.
+
 const express = require('express');
-const { getCategorizedEmails, getFilteredEmails } = require('../controllers/emailController');
-
 const router = express.Router();
+const {
+  fetchEmails,
+  extractTasks,
+  getTasks,
+} = require('../controllers/emailController'); // Controller routing: controllers/emailController.js
 
-// Route to categorize emails
-router.post('/categorize', getCategorizedEmails);
+// Fetch emails from Gmail API or mock data
+router.get('/emails', fetchEmails);
 
-// Route to filter emails by category
-router.post('/filter', getFilteredEmails);
+// Process emails to extract tasks
+router.post('/tasks', extractTasks);
+
+// Retrieve tasks categorized by priority and deadlines
+router.get('/tasks', getTasks);
 
 module.exports = router;
