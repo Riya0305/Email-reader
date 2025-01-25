@@ -1,23 +1,33 @@
+import { OAuth2Client } from "google-auth-library";
 import express from "express";
 import cors from "cors";
 
 const app = express();
+const client = new OAuth2Client("YOUR_GOOGLE_CLIENT_ID");
 
 app.use(cors());
 app.use(express.json());
 
-const users = [
-  { email: "user1@example.com", password: "password123" },
-];
+app.post("/api/google-login", async (req, res) => {
+  const { token } = req.body;
 
-app.post("/api/login", (req, res) => {
-  const { email, password } = req.body;
+  try {
+    // Verify the Google token
+    const ticket = await client.verifyIdToken({
+      idToken: token,
+      audience: "807669090767-llgvrlojm7amhibj90u0baqit39f4rh0.apps.googleusercontent.com",
+    });
 
-  const user = users.find((u) => u.email === email && u.password === password);
-  if (user) {
-    res.json({ message: "Login successful", token: "fake-jwt-token" });
-  } else {
-    res.status(401).json({ message: "Invalid email or password" });
+    const payload = ticket.getPayload();
+    const email = payload.email;
+
+    // Optionally, create or find the user in your database
+    console.log("Google user verified:", email);
+
+    // Respond with a token
+    res.json({ message: "Google Login successful", token: "fake-jwt-token" });
+  } catch (err) {
+    res.status(401).json({ message: "Invalid Google token" });
   }
 });
 
