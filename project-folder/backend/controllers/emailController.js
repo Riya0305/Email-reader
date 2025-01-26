@@ -1,5 +1,3 @@
-//fetching emails, extracting tasks, retrieving tasks) while adding the new task to analyze emails using ChatGPT and processing emails in one step.
-
 const { fetchEmailsFromGmail, categorizeAndExtractTasks, analyzeEmailWithChatGPT, processEmails } = require('../utils/emailProcessor'); // Utility routing: utils/emailProcessor.js
 const taskStore = []; // Temporary in-memory storage for tasks (replace with DB later)
 
