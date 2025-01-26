@@ -1,6 +1,6 @@
 import React, { useState } from "react";
 import { GoogleOAuthProvider, GoogleLogin } from "@react-oauth/google";
-import { useNavigate } from "react-router-dom"; // Import the navigation hook
+import { useNavigate } from "react-router-dom";
 import axios from "axios";
 
 const Login = () => {
@@ -9,7 +9,7 @@ const Login = () => {
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
 
-  const navigate = useNavigate(); // Initialize the navigation hook
+  const navigate = useNavigate();
 
   const handleLogin = async (e) => {
     e.preventDefault();
@@ -23,6 +23,7 @@ const Login = () => {
       });
       setSuccess(response.data.message);
       localStorage.setItem("token", response.data.token);
+      navigate("/success", { state: { user: response.data.user } });
     } catch (err) {
       if (err.response && err.response.data) {
         setError(err.response.data.message);
@@ -40,7 +41,9 @@ const Login = () => {
 
       setSuccess(response.data.message);
       localStorage.setItem("token", response.data.token);
-      console.log("Google login successful:", response.data);
+
+      // Redirect to SuccessPage with user data
+      navigate("/success", { state: { user: response.data.user } });
     } catch (err) {
       setError("Google sign-in failed.");
     }
@@ -53,7 +56,7 @@ const Login = () => {
         <div className="flex items-center p-4">
           <button
             className="flex items-center text-purple hover:text-blue-700"
-            onClick={() => navigate(-1)} // Go back to the previous page
+            onClick={() => navigate(-1)}
           >
             <span className="mr-2">←</span> Go Back
           </button>
